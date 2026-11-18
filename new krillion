@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Dive · Chemotherapy &amp; Antimicrobials</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #e6f1ff;
+      background: linear-gradient(180deg, #1b4965 0%, #0d2b45 35%, #071626 75%, #030912 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px;
+      overflow-x: hidden;
+      transition: filter 0.5s ease;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.025) 0px,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      gap: 12px;
+      z-index: 1;
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .hud-box {
+      background: rgba(7, 20, 36, 0.88);
+      border: 1px solid rgba(125, 211, 252, 0.32);
+      padding: 10px 14px;
+      border-radius: 6px;
+    }
+
+    .hud-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: #7dd3fc;
+      text-transform: uppercase;
+    }
+
+    .hud-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .timer-urgent {
+      color: #f87171;
+    }
+
+    .card {
+      max-width: 720px;
+      width: 100%;
+      margin: 24px auto;
+      background: rgba(6, 17, 31, 0.94);
+      border: 1px solid rgba(125, 211, 252, 0.38);
+      border-radius: 10px;
+      padding: 28px;
+      box-shadow: 0 22px 55px rgba(0, 0, 0, 0.6);
+      z-index: 1;
+    }
+
+    .top-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .topic-tag {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: #7dd3fc;
+      text-transform: uppercase;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .timer-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .timer-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: #38bdf8;
+      transition: width 0.25s linear, background-color 0.25s ease;
+    }
+
+    .question {
+      font-size: 21px;
+      line-height: 1.42;
+      margin-bottom: 18px;
+      font-weight: 600;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 220px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #f8fafc;
+      background: #0b1f35;
+      border: 1px solid #38bdf8;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    input[type="text"]:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button {
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      color: #04101c;
+      background: #38bdf8;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+    }
+
+    button:hover:not(:disabled) { opacity: 0.92; }
+    button:active:not(:disabled) { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    button.secondary {
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .descend-box {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(125, 211, 252, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-line {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .correct { color: #4ade80; }
+    .wrong { color: #f87171; }
+    .timeout { color: #fbbf24; }
+
+    .key-answer {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      background: rgba(11, 31, 53, 0.75);
+      padding: 12px 14px;
+      border-radius: 6px;
+      border-left: 3px solid #38bdf8;
+    }
+
+    .descend-btn {
+      align-self: flex-start;
+      background: #082f49;
+      color: #e0f2fe;
+      border: 2px solid #38bdf8;
+      letter-spacing: 0.08em;
+      padding: 12px 22px;
+    }
+
+    .descend-btn:hover {
+      background: #0c4a6e;
+    }
+
+    .footer-bar {
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+      z-index: 1;
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .mini-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      background: rgba(7, 20, 36, 0.85);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <header class="hud">
+    <div class="hud-box">
+      <div class="hud-label">Depth</div>
+      <div class="hud-value" id="depth">0m</div>
+    </div>
+    <div class="hud-box" style="text-align: center;">
+      <div class="hud-label">Prompt</div>
+      <div class="hud-value" id="progress">1 / 53</div>
+    </div>
+    <div class="hud-box" style="text-align: center;">
+      <div class="hud-label">Timer</div>
+      <div class="hud-value" id="timer">40s</div>
+    </div>
+    <div class="hud-box" style="text-align: right;">
+      <div class="hud-label">Score</div>
+      <div class="hud-value" id="score">0</div>
+    </div>
+  </header>
+
+  <main class="card" id="game-card">
+    <div class="top-meta-row">
+      <span class="topic-tag" id="topic-tag">Topic</span>
+      <span class="hud-label" id="zone-label">Sunlight Zone</span>
+    </div>
+
+    <div class="timer-bar-wrap">
+      <div class="timer-bar-fill" id="timer-bar"></div>
+    </div>
+
+    <div class="question" id="question-text">Loading...</div>
+
+    <form class="input-row" id="answer-form">
+      <input
+        type="text"
+        id="answer-input"
+        placeholder="Type your answer (2+ matching words counts)..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit" id="submit-btn">Submit</button>
+      <button type="button" class="secondary" id="skip-btn">Give Up</button>
+    </form>
+
+    <div class="descend-box" id="descend-box" style="display: none;">
+      <div class="status-line" id="status-line"></div>
+      <div class="key-answer" id="key-answer"></div>
+      <button type="button" class="descend-btn" id="descend-btn">DESCEND ▼</button>
+    </div>
+  </main>
+
+  <footer class="footer-bar">
+    <div>40s per prompt · Answer to lock in result, then click <strong>DESCEND ▼</strong> to move on.</div>
+    <div class="controls-row">
+      <button type="button" class="mini-btn" id="shuffle-btn">Shuffle Deck</button>
+      <button type="button" class="mini-btn" id="reset-btn">Reset Dive</button>
+    </div>
+  </footer>
+
+  <script>
+    const QUESTION_TIME = 40;
+
+    const RAW_BANK = [
+      ["History & Foundations of Chemotherapy", "Paul Ehrlich", "Screened arsenic compounds; discovered Salvarsan (Compound 606) to treat syphilis (Treponema pallidum)"],
+      ["History & Foundations of Chemotherapy", "Gerhard Domagk (Josef Klarer & Fritz Mietzsch)", "Discovered the synthetic dye Prontosil, which metabolizes to sulfanilamide; founded sulfa drugs"],
+      ["History & Foundations of Chemotherapy", "Alexander Fleming", "Accidentally discovered the first natural antibiotic, penicillin, from the mold Penicillium notatum"],
+      ["History & Foundations of Chemotherapy", "Ernst Chain & Howard Florey", "Isolated, purified, and scaled up mass production of penicillin in the 1940s"],
+      ["History & Foundations of Chemotherapy", "Dorothy Hodgkin", "Used X-ray crystallography to determine the 3D structure of penicillin; enabled semisynthetic penicillins"],
+      ["History & Foundations of Chemotherapy", "Selman Waksman", "Studied soil actinomycetes (Streptomyces); discovered streptomycin; source of >50% of natural antibiotics"],
+      ["History & Foundations of Chemotherapy", "Natural Antibiotics", "Antimicrobial compounds produced entirely by living microorganisms in nature (e.g., penicillin, streptomycin)"],
+      ["History & Foundations of Chemotherapy", "Synthetic Antimicrobials", "Drugs developed and synthesized purely from chemical processes in a laboratory (e.g., sulfanilamide, fluoroquinolones)"],
+      ["History & Foundations of Chemotherapy", "Semisynthetic Antimicrobials", "Chemically modified derivatives of natural antibiotics engineered to broaden spectrum or overcome resistance (e.g., ampicillin, methicillin)"],
+      ["History & Foundations of Chemotherapy", "Narrow-Spectrum Antimicrobial", "Targets only specific subsets of pathogens (e.g., only Gram-positive); preserves normal host microbiota"],
+      ["History & Foundations of Chemotherapy", "Broad-Spectrum Antimicrobial", "Targets a wide variety of bacterial pathogens (both Gram-positive and Gram-negative); used for empirical therapy"],
+      ["History & Foundations of Chemotherapy", "Superinfection", "Secondary infection that arises when broad-spectrum drugs wipe out protective normal microbiota, allowing resistant pathogens to overgrow (e.g., C. difficile, Candida albicans)"],
+      ["History & Foundations of Chemotherapy", "Bacteriostatic", "Reversibly inhibits bacterial growth and division; host immune system clears remaining bacteria"],
+      ["History & Foundations of Chemotherapy", "Bactericidal", "Directly kills target bacteria; essential for immunocompromised patients or life-threatening infections"],
+      ["History & Foundations of Chemotherapy", "Synergistic Drug Interaction", "Two drugs working together produce an effect greater than the sum of their individual effects (e.g., Trimethoprim + Sulfamethoxazole)"],
+      ["History & Foundations of Chemotherapy", "Antagonistic Drug Interaction", "Two drugs produce harmful or reduced efficacy when combined (e.g., Rifampin + oral contraceptives)"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "β-Lactams (Mechanism)", "Inhibit transpeptidase / Penicillin-Binding Proteins (PBPs); block peptide cross-linking in peptidoglycan synthesis"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "β-Lactams (Major Classes)", "Penicillins, Cephalosporins, Carbapenems, and Monobactams (all share a central 4-membered β-lactam ring)"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Penicillins", "β-lactam class; includes natural (Penicillin G/V) and semisynthetics (ampicillin, amoxicillin, methicillin)"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Cephalosporins", "β-lactam with a 6-membered ring fused to β-lactam ring; generations have increased Gram-negative coverage"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Carbapenems", "Broadest-spectrum β-lactams against both Gram-positive and Gram-negative pathogens"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Monobactams (Aztreonam)", "Narrow-spectrum β-lactam active ONLY against Gram-negative bacteria"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Vancomycin", "Large glycopeptide; binds D-Ala-D-Ala terminus to block transpeptidation; active ONLY against Gram-positive bacteria (cannot cross Gram-negative outer membrane)"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Bacitracin", "Blocks bactoprenol lipid carrier; prevents transport of peptidoglycan monomers (NAG-NAM) across the cell membrane"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Aminoglycosides (Streptomycin, Gentamicin, Neomycin)", "Bind 30S ribosomal subunit; impair proofreading, causing faulty/misfolded proteins that disrupt cell membrane; bactericidal"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Tetracyclines (Doxycycline, Tetracycline)", "Reversibly bind 30S ribosomal subunit; block incoming aminoacyl-tRNAs from binding the ribosomal A site; bacteriostatic"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Macrolides (Erythromycin, Azithromycin)", "Bind 50S ribosomal subunit; block peptide elongation and translocation; bacteriostatic"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Lincosamides (Clindamycin, Lincomycin)", "Bind 50S ribosomal subunit; inhibit peptide bond formation; bacteriostatic"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Chloramphenicol", "Binds 50S subunit to inhibit peptide bond formation; toxic side effects include aplastic anemia and gray baby syndrome"],
+      ["Antibacterial Mechanisms: Cell Wall & Ribosomes", "Oxazolidinones (Linezolid)", "Synthetic drug; binds 50S subunit to block its assembly with 30S initiation complex; broad-spectrum and bacteriostatic"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Polymyxins (Polymyxin B & Colistin / Polymyxin E)", "Lipophilic polypeptides; bind LPS and disrupt outer/inner membranes of Gram-negative bacteria like detergents"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Daptomycin", "Lipopeptide; inserts into and disrupts cytoplasmic membrane of Gram-positive bacteria"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Rifamycins (Rifampin)", "Binds bacterial RNA polymerase; blocks transcription / mRNA synthesis; treats M. tuberculosis; causes hepatotoxicity"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Fluoroquinolones (Ciprofloxacin, Levofloxacin)", "Inhibit bacterial DNA gyrase (topoisomerase II) and topoisomerase IV; block DNA replication; bactericidal"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Antimetabolites", "Competitive enzyme inhibitors that structurally mimic natural substrates to block bacterial metabolic pathways"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Sulfonamides (Sulfa Drugs)", "PABA structural analogs; competitively inhibit dihydropteroate synthase in bacterial folic acid synthesis; bacteriostatic"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Trimethoprim", "Structural analog of dihydrofolic acid; competitively inhibits dihydrofolate reductase in folic acid pathway; synergistic with sulfa drugs"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Isoniazid (INH)", "Antimetabolite; specifically blocks synthesis of waxy mycolic acid in Mycobacterium tuberculosis cell walls"],
+      ["Membranes, Nucleic Acids, & Antimetabolites", "Bedaquiline", "Diarylquinoline; inhibits mycobacterial ATP synthase; treats multidrug-resistant tuberculosis"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Ergosterol", "Unique sterol in fungal cell membranes (analogous to cholesterol in human membranes); primary target of selective antifungal toxicity"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Imidazoles & Triazoles (Fluconazole, Ketoconazole)", "Inhibit fungal ergosterol biosynthesis; treat dermatophyte infections and systemic candidiasis"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Allylamines (Terbinafine / Lamisil)", "Inhibit squalene epoxidase in early ergosterol synthesis; treat skin and nail fungal infections"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Polyenes (Amphotericin B, Nystatin)", "Bind directly to membrane ergosterol; create pores that cause ion leakage and cell lysis; ANTIFUNGAL (not antiprotozoal)"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Echinocandins (Caspofungin)", "Inhibit synthesis of β(1→3) glucan in fungal cell walls (\"penicillin for fungi\")"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Polyoxins & Nikkomycins", "Inhibit chitin synthesis in fungal cell walls"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Griseofulvin", "Disrupts fungal mitotic spindle microtubules; blocks cell division"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Atovaquone", "Antimetabolite competing with ubiquinone; inhibits mitochondrial cytochrome electron transport in protozoa (Plasmodium, Babesia) and fungi"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Metronidazole (Flagyl)", "Activated in anaerobic environments to introduce DNA strand breaks; treats Giardia, Entamoeba, Trichomonas, and anaerobic bacteria"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Artemisinin", "Plant-derived antimalarial; releases damaging reactive oxygen species (ROS) inside target parasites"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Mebendazole & Albendazole", "Antihelminthics; inhibit helminthic microtubule formation, blocking glucose uptake"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Ivermectin", "Antihelminthic; binds glutamate-gated chloride channels; induces flaccid paralysis and death in roundworms and mites/lice"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Praziquantel", "Antihelminthic; induces rapid calcium influx across worm integument, causing severe muscle spasm and paralysis; treats flukes (Schistosoma) and tapeworms"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Acyclovir", "Synthetic guanosine nucleoside analog; selectively phosphorylated by viral thymidine kinase; inhibits viral DNA polymerase in herpesviruses"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Amantadine & Rimantadine", "M2 ion channel blockers; prevent endosomal escape and viral uncoating in Influenza A"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Oseltamivir (Tamiflu) & Zanamivir", "Neuraminidase inhibitors; block budding and release of progeny Influenza virions from infected host cells"],
+      ["Antifungals, Antiprotozoals, Antihelminthics, & Antivirals", "Antiretroviral Therapy (ART) Cocktail", "Multi-drug therapy for HIV combining reverse transcriptase inhibitors (AZT), protease inhibitors (ritonavir), and integrase inhibitors (raltegravir)"],
+      ["Drug Resistance & Efficacy Testing", "Enzymatic Inactivation (Resistance)", "Bacteria produce enzymes that hydrolyze or modify drugs (e.g., β-lactamases destroy β-lactam rings)"],
+      ["Drug Resistance & Efficacy Testing", "Target Modification (Resistance)", "Mutations change target structure so drug cannot bind (e.g., altering LPS prevents polymyxin binding; mutating RNA polymerase prevents rifampin binding)"],
+      ["Drug Resistance & Efficacy Testing", "Prevention of Accumulation (Resistance)", "Decreasing outer membrane porin channels to block entry, or using active efflux pumps to pump antibiotics out"],
+      ["Drug Resistance & Efficacy Testing", "Target Overproduction (Resistance)", "Producing excess target enzyme so enough uninhibited enzymes remain to sustain cell function"],
+      ["Drug Resistance & Efficacy Testing", "Target Mimicry (Resistance)", "Bacteria produce proteins that sequester drugs away from real targets (e.g., MfpA protein mimics DNA to bind fluoroquinolones)"],
+      ["Drug Resistance & Efficacy Testing", "ESKAPE Pathogens", "Major nosocomial multidrug-resistant pathogens: Enterococcus faecium, Staphylococcus aureus, Klebsiella pneumoniae, Acinetobacter baumannii, Pseudomonas aeruginosa, Enterobacter spp."],
+      ["Drug Resistance & Efficacy Testing", "MRSA (Resistance Mechanism)", "Acquired mecA gene encoding PBP2a, an altered transpeptidase that does not bind β-lactams"],
+      ["Drug Resistance & Efficacy Testing", "VRE (Vancomycin-Resistant Enterococci)", "Modifies peptidoglycan peptide terminus from D-Ala-D-Ala to D-Ala-D-Lac; prevents vancomycin binding"],
+      ["Drug Resistance & Efficacy Testing", "MDR-TB vs. XDR-TB", "MDR-TB is resistant to isoniazid and rifampin; XDR-TB is resistant to isoniazid, rifampin, any fluoroquinolone, and at least one second-line injectable"],
+      ["Drug Resistance & Efficacy Testing", "Kirby-Bauer Disk Diffusion Assay", "Standardized susceptibility test on Mueller-Hinton agar; zone of inhibition diameter (mm) determines Susceptible, Intermediate, or Resistant"],
+      ["Drug Resistance & Efficacy Testing", "Zone of Inhibition Rule", "A LARGER zone of inhibition indicates GREATER microbial susceptibility/inhibition; a smaller zone indicates resistance"],
+      ["Drug Resistance & Efficacy Testing", "Minimal Inhibitory Concentration (MIC)", "Lowest concentration of an antimicrobial drug that prevents/inhibits visible bacterial growth in liquid broth"],
+      ["Drug Resistance & Efficacy Testing", "Minimal Bactericidal Concentration (MBC)", "Lowest drug concentration that kills ≥ 99.9% of the starting bacterial inoculum (plated from clear MIC tubes)"],
+      ["Drug Resistance & Efficacy Testing", "Etest", "Plastic strip with an exponential antibiotic gradient placed on agar lawn; elliptical zone intersection directly reads the MIC"],
+      ["Drug Resistance & Efficacy Testing", "iChip", "Device allowing unculturable soil microbes to be grown in their natural soil environment; led to discovery of teixobactin."]
+    ];
+
+    function simplifyAnswer(fullText) {
+      const clean = fullText
+        .replace(/β/g, "beta")
+        .replace(/→/g, " to ")
+        .replace(/≥/g, "at least ")
+        .replace(/[()]/g, " ")
+        .replace(/[^a-zA-Z0-9\s-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const words = clean.split(" ");
+      if (words.length <= 10) return clean;
+      return words.slice(0, 10).join(" ") + "...";
+    }
+
+    const STOP_WORDS = new Set([
+      "the", "and", "or", "of", "to", "in", "a", "an", "for", "on", "by", "with",
+      "from", "that", "is", "are", "be", "as", "at", "it", "its", "into", "blocks",
+      "inhibits", "binds", "causes", "treats", "e", "g"
+    ]);
+
+    function tokenizeMeaningful(str) {
+      return str
+        .toLowerCase()
+        .replace(/β/g, "beta")
+        .replace(/[^a-z0-9\s-]/g, " ")
+        .split(/[\s-]+/)
+        .map((w) => w.trim())
+        .filter((w) => w.length >= 2 && !STOP_WORDS.has(w));
+    }
+
+    const DECK = RAW_BANK.map(([topic, prompt, fullAnswer], idx) => ({
+      id: idx + 1,
+      topic,
+      prompt,
+      fullAnswer,
+      shortAnswer: simplifyAnswer(fullAnswer),
+      depthGain: 120 + (idx % 4) * 55,
+      points: 100
+    }));
+
+    let questions = [...DECK];
+    let currentIdx = 0;
+    let depth = 0;
+    let score = 0;
+    let timeLeft = QUESTION_TIME;
+    let timerId = null;
+    let isLocked = false;
+
+    const depthEl = document.getElementById("depth");
+    const progressEl = document.getElementById("progress");
+    const timerEl = document.getElementById("timer");
+    const timerBarEl = document.getElementById("timer-bar");
+    const scoreEl = document.getElementById("score");
+    const topicTagEl = document.getElementById("topic-tag");
+    const zoneLabelEl = document.getElementById("zone-label");
+    const questionEl = document.getElementById("question-text");
+    const inputEl = document.getElementById("answer-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const skipBtn = document.getElementById("skip-btn");
+    const formEl = document.getElementById("answer-form");
+    const descendBoxEl = document.getElementById("descend-box");
+    const statusLineEl = document.getElementById("status-line");
+    const keyAnswerEl = document.getElementById("key-answer");
+    const descendBtn = document.getElementById("descend-btn");
+    const shuffleBtn = document.getElementById("shuffle-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const cardEl = document.getElementById("game-card");
+
+    function getOceanZone(d) {
+      if (d < 200) return "Sunlight Zone";
+      if (d < 1000) return "Twilight Zone";
+      if (d < 4000) return "Midnight Zone";
+      if (d < 6000) return "Abyssal Zone";
+      return "Hadal Trench";
+    }
+
+    function updateVisualDepth() {
+      const darkness = Math.min(depth / 7500, 0.42);
+      document.body.style.filter = `brightness(${1 - darkness})`; zoneLabelEl.textContent = getOceanZone(depth); }  function stopTimer() { if (timerId !== null) { clearInterval(timerId); timerId = null; } }  function renderTimer() { timerEl.textContent = `${timeLeft}s`;
+      timerEl.classList.toggle("timer-urgent", timeLeft <= 10);
+      const pct = Math.max(0, (timeLeft / QUESTION_TIME) * 100);
+      timerBarEl.style.width = `${pct}\%`; timerBarEl.style.backgroundColor = timeLeft <= 10 ? "#f87171" : "#38bdf8"; }  function isAnswerMatch(userText, q) { const cleanUser = userText.toLowerCase().trim(); const shortLower = q.shortAnswer.toLowerCase(); const fullLower = q.fullAnswer.toLowerCase();  if (cleanUser.length >= 2 && (shortLower.includes(cleanUser) \vert{}\vert{} fullLower.includes(cleanUser))) { return true; }  const userTokens = new Set(tokenizeMeaningful(userText)); const answerTokens = new Set([ ...tokenizeMeaningful(q.shortAnswer), ...tokenizeMeaningful(q.fullAnswer) ]);  let sharedCount = 0; for (const token of userTokens) { if (answerTokens.has(token)) { sharedCount += 1; } }  return sharedCount >= 2; }  function lockQuestion(outcome, q) { stopTimer(); isLocked = true; inputEl.disabled = true; submitBtn.disabled = true; skipBtn.disabled = true; descendBoxEl.style.display = "flex";  if (outcome === "correct") { depth += q.depthGain; score += q.points; depthEl.textContent = `${depth.toLocaleString()}m`;
+        scoreEl.textContent = score.toLocaleString();
+        updateVisualDepth();
+        statusLineEl.textContent = `MATCH CONFIRMED · +${q.depthGain}m · +${q.points} PTS`;
+        statusLineEl.className = "status-line correct";
+      } else if (outcome === "timeout") {
+        statusLineEl.textContent = "TIME EXPIRED (40s) · +0m · +0 PTS";
+        statusLineEl.className = "status-line timeout";
+      } else {
+        statusLineEl.textContent = "SKIPPED · +0m · +0 PTS";
+        statusLineEl.className = "status-line wrong";
+      }
+
+      keyAnswerEl.innerHTML = `
+        <strong>Short key:</strong> ${q.shortAnswer}<br />
+        <strong>
